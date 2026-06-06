@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nova Chat</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google Fonts: DM Sans + DM Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- Supabase CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="css/style.css" />
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['DM Sans', 'sans-serif'],
+            mono: ['DM Mono', 'monospace'],
+          },
+          colors: {
+            surface: {
+              50:  '#f5f5f5',
+              100: '#1a1a1e',
+              200: '#141417',
+              300: '#0f0f11',
+              400: '#0a0a0c',
+            },
+            border: {
+              subtle: 'rgba(255,255,255,0.07)',
+              DEFAULT: 'rgba(255,255,255,0.12)',
+              strong: 'rgba(255,255,255,0.22)',
+            },
+            accent: {
+              blue:   '#4A9EFF',
+              teal:   '#27D9B5',
+              purple: '#A78BFA',
+            },
+          },
+          animation: {
+            'fade-up':      'fadeUp 0.35s cubic-bezier(0.16,1,0.3,1) forwards',
+            'fade-in':      'fadeIn 0.25s ease forwards',
+            'skeleton-shimmer': 'shimmer 1.6s infinite',
+            'typing-pulse': 'typingPulse 1.2s ease-in-out infinite',
+            'spin-slow':    'spin 1.4s linear infinite',
+          },
+          keyframes: {
+            fadeUp: {
+              '0%':   { opacity: '0', transform: 'translateY(14px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
+            },
+            fadeIn: {
+              '0%':   { opacity: '0' },
+              '100%': { opacity: '1' },
+            },
+            shimmer: {
+              '0%':   { backgroundPosition: '-700px 0' },
+              '100%': { backgroundPosition: '700px 0' },
+            },
+            typingPulse: {
+              '0%, 100%': { opacity: '0.3', transform: 'scale(0.75)' },
+              '50%':       { opacity: '1',   transform: 'scale(1)' },
+            },
+          },
+        },
+      },
+    };
+  </script>
+</head>
+
+<body class="bg-surface-300 text-zinc-100 font-sans antialiased overflow-hidden h-screen flex">
+
+  <!-- ═══════════════════════════════════════════════
+       SIDEBAR
+  ═══════════════════════════════════════════════ -->
+  <aside id="sidebar"
+    class="sidebar flex flex-col w-72 h-full bg-surface-200 border-r border-border-subtle shrink-0 transition-all duration-300 ease-in-out z-30">
+
+    <!-- Sidebar Header -->
+    <div class="flex items-center justify-between px-4 pt-5 pb-4">
+      <div class="flex items-center gap-2.5">
+        <!-- Logo mark -->
+        <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-accent-blue to-accent-teal flex items-center justify-center shadow-lg">
+          <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/>
+          </svg>
+        </div>
+        <span class="text-[15px] font-semibold tracking-tight text-zinc-100">Nova Chat</span>
+      </div>
+
+      <!-- Collapse button -->
+      <button id="sidebarToggle"
+        class="w-8 h-8 rounded-lg flex items-center justify-center text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-colors"
+        title="Collapse sidebar">
+        <svg class="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- New Chat Button -->
+    <div class="px-3 mb-3">
+      <button id="newChatBtn"
+        class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-zinc-200 border border-border-DEFAULT hover:bg-white/5 hover:border-border-strong transition-all duration-200 group">
+        <svg class="w-4 h-4 text-zinc-400 group-hover:text-accent-blue transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+        </svg>
+        New conversation
+      </button>
+    </div>
+
+    <!-- Divider + label -->
+    <div class="px-4 mb-2">
+      <p class="text-[11px] font-medium tracking-widest uppercase text-zinc-600">Recent</p>
+    </div>
+
+    <!-- Conversation history list -->
+    <nav id="chatHistoryList" class="flex-1 overflow-y-auto px-2 space-y-0.5 custom-scroll">
+      <!-- History items rendered by JS -->
+    </nav>
+
+    <!-- Sidebar Footer -->
+    <div class="px-3 py-4 border-t border-border-subtle mt-auto">
+      <div class="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-white/5 cursor-pointer transition-colors group">
+        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-accent-purple to-accent-blue flex items-center justify-center text-xs font-bold text-white shrink-0">
+          U
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-medium text-zinc-200 truncate">You</p>
+          <p class="text-xs text-zinc-500 truncate">user@example.com</p>
+        </div>
+        <svg class="w-4 h-4 text-zinc-600 group-hover:text-zinc-400 transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 18.75a.75.75 0 110-1.5.75.75 0 010 1.5z"/>
+        </svg>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Sidebar collapsed state: icon-only rail -->
+  <aside id="sidebarRail"
+    class="hidden flex-col items-center w-16 h-full bg-surface-200 border-r border-border-subtle shrink-0 py-5 gap-4 z-30">
+    <button id="railExpandBtn"
+      class="w-9 h-9 rounded-xl bg-gradient-to-br from-accent-blue to-accent-teal flex items-center justify-center shadow-lg hover:opacity-80 transition-opacity"
+      title="Expand sidebar">
+      <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/>
+      </svg>
+    </button>
+    <button id="railNewChat"
+      class="w-9 h-9 rounded-xl flex items-center justify-center text-zinc-400 hover:text-zinc-100 hover:bg-white/5 border border-border-subtle transition-all"
+      title="New chat">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+      </svg>
+    </button>
+  </aside>
+
+
+  <!-- ═══════════════════════════════════════════════
+       MAIN CONTENT
+  ═══════════════════════════════════════════════ -->
+  <main class="flex flex-col flex-1 h-full overflow-hidden relative">
+
+    <!-- Top bar (mobile hamburger + title) -->
+    <header class="flex items-center gap-3 px-5 py-3.5 border-b border-border-subtle shrink-0 md:hidden">
+      <button id="mobileSidebarToggle"
+        class="w-8 h-8 rounded-lg flex items-center justify-center text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-colors">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/>
+        </svg>
+      </button>
+      <span class="text-[15px] font-semibold text-zinc-100">Nova Chat</span>
+    </header>
+
+    <!-- ── Config Banner (shows until Supabase keys are set) ── -->
+    <div id="configBanner"
+      class="mx-4 mt-4 p-4 rounded-2xl border border-amber-500/30 bg-amber-500/5 text-amber-300 text-sm flex items-start gap-3 animate-fade-in">
+      <svg class="w-5 h-5 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+      </svg>
+      <div>
+        <p class="font-semibold mb-1">Supabase not configured</p>
+        <p class="text-amber-400/80 text-xs leading-relaxed">Open <code class="font-mono bg-amber-500/10 px-1 py-0.5 rounded">js/config.js</code> and set your <code class="font-mono bg-amber-500/10 px-1 py-0.5 rounded">SUPABASE_URL</code> and <code class="font-mono bg-amber-500/10 px-1 py-0.5 rounded">SUPABASE_ANON_KEY</code>. The UI is fully functional in demo mode until then.</p>
+      </div>
+      <button onclick="this.parentElement.remove()" class="ml-auto text-amber-400/60 hover:text-amber-300 transition-colors shrink-0">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- ── Chat Messages Area ── -->
+    <div id="chatContainer"
+      class="flex-1 overflow-y-auto custom-scroll px-4 py-6 space-y-2"
+      aria-live="polite" aria-label="Chat messages">
+
+      <!-- Empty state / welcome -->
+      <div id="emptyState" class="flex flex-col items-center justify-center h-full gap-6 pb-20">
+        <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-accent-blue/30 to-accent-teal/20 flex items-center justify-center border border-accent-blue/20">
+          <svg class="w-8 h-8 text-accent-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/>
+          </svg>
+        </div>
+        <div class="text-center space-y-2">
+          <h1 class="text-2xl font-semibold tracking-tight text-zinc-100">How can I help you today?</h1>
+          <p class="text-zinc-500 text-sm max-w-xs leading-relaxed">Send a message or attach an image to start a new conversation.</p>
+        </div>
+
+        <!-- Suggestion chips -->
+        <div class="grid grid-cols-2 gap-2 w-full max-w-md">
+          <button class="suggestion-chip text-left p-3.5 rounded-2xl border border-border-DEFAULT bg-surface-200 hover:bg-white/5 hover:border-border-strong transition-all group">
+            <p class="text-xs font-medium text-zinc-300 group-hover:text-white transition-colors">✍️ Draft an email</p>
+            <p class="text-[11px] text-zinc-600 mt-0.5">to my team about the sprint</p>
+          </button>
+          <button class="suggestion-chip text-left p-3.5 rounded-2xl border border-border-DEFAULT bg-surface-200 hover:bg-white/5 hover:border-border-strong transition-all group">
+            <p class="text-xs font-medium text-zinc-300 group-hover:text-white transition-colors">🧠 Explain a concept</p>
+            <p class="text-[11px] text-zinc-600 mt-0.5">like I'm a beginner</p>
+          </button>
+          <button class="suggestion-chip text-left p-3.5 rounded-2xl border border-border-DEFAULT bg-surface-200 hover:bg-white/5 hover:border-border-strong transition-all group">
+            <p class="text-xs font-medium text-zinc-300 group-hover:text-white transition-colors">💻 Write code</p>
+            <p class="text-[11px] text-zinc-600 mt-0.5">for a REST API endpoint</p>
+          </button>
+          <button class="suggestion-chip text-left p-3.5 rounded-2xl border border-border-DEFAULT bg-surface-200 hover:bg-white/5 hover:border-border-strong transition-all group">
+            <p class="text-xs font-medium text-zinc-300 group-hover:text-white transition-colors">📊 Analyze data</p>
+            <p class="text-[11px] text-zinc-600 mt-0.5">from an uploaded image</p>
+          </button>
+        </div>
+      </div>
+
+    </div><!-- /chatContainer -->
+
+
+    <!-- ── Input Area ── -->
+    <div class="input-area shrink-0 px-4 pb-5 pt-3">
+      <div class="max-w-3xl mx-auto">
+
+        <!-- Media preview strip -->
+        <div id="mediaPreview"
+          class="hidden flex gap-2 mb-2 px-1 overflow-x-auto custom-scroll-x pb-1">
+        </div>
+
+        <!-- Input card -->
+        <div id="inputCard"
+          class="relative flex flex-col rounded-2xl border border-border-DEFAULT bg-surface-200 shadow-2xl shadow-black/40 transition-all duration-200 focus-within:border-accent-blue/50 focus-within:shadow-accent-blue/5">
+
+          <!-- Textarea -->
+          <textarea
+            id="messageInput"
+            rows="1"
+            placeholder="Message Nova…"
+            class="w-full bg-transparent resize-none px-4 pt-4 pb-2 text-sm text-zinc-100 placeholder-zinc-600 outline-none leading-relaxed max-h-48 custom-scroll"
+            aria-label="Message input"
+          ></textarea>
+
+          <!-- Toolbar -->
+          <div class="flex items-center justify-between px-3 pb-3 pt-1">
+            <div class="flex items-center gap-1">
+
+              <!-- Attach media -->
+              <button id="attachBtn"
+                class="toolbar-btn"
+                title="Attach image or video"
+                aria-label="Attach file">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13"/>
+                </svg>
+              </button>
+              <input type="file" id="fileInput" accept="image/*,video/*" class="hidden" aria-hidden="true" />
+
+              <!-- Emoji placeholder -->
+              <button class="toolbar-btn" title="Emoji (coming soon)" aria-label="Emoji">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.182 15.182a4.5 4.5 0 01-6.364 0M21 12a9 9 0 11-18 0 9 9 0 0118 0zM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75zm-.375 0h.008v.015h-.008V9.75zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75zm-.375 0h.008v.015h-.008V9.75z"/>
+                </svg>
+              </button>
+
+            </div>
+
+            <!-- Right side -->
+            <div class="flex items-center gap-2">
+              <span id="charCount" class="text-[11px] text-zinc-600 font-mono hidden"></span>
+
+              <!-- Upload progress ring (hidden by default) -->
+              <div id="uploadProgress" class="hidden">
+                <svg class="w-5 h-5 text-accent-blue animate-spin-slow" viewBox="0 0 24 24" fill="none">
+                  <circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"/>
+                  <path class="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                </svg>
+              </div>
+
+              <!-- Send button -->
+              <button id="sendBtn"
+                class="send-btn w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                aria-label="Send message"
+                disabled>
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.269 20.876L5.999 12zm0 0h7.5"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+        </div><!-- /inputCard -->
+
+        <p class="text-center text-[11px] text-zinc-700 mt-2.5">
+          Nova may produce inaccurate information. Connected to Supabase Realtime.
+        </p>
+      </div>
+    </div><!-- /input-area -->
+
+  </main>
+
+  <!-- Mobile sidebar overlay -->
+  <div id="mobileOverlay"
+    class="fixed inset-0 bg-black/60 backdrop-blur-sm z-20 hidden md:hidden"
+    aria-hidden="true">
+  </div>
+
+  <!-- Notification toast -->
+  <div id="toast"
+    class="fixed bottom-6 left-1/2 -translate-x-1/2 px-4 py-2.5 rounded-xl text-sm font-medium shadow-xl z-50 opacity-0 pointer-events-none transition-all duration-300 flex items-center gap-2">
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/supabase.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>
