@@ -16,7 +16,7 @@ const SUPABASE_CONFIG = {
   url: 'https://pqeijbipyjqjhexywyji.supabase.co/',
 
   // ← Replace with your Supabase anon (public) key
-  anonKey: 'sb_publishable_P2tg5uIBB3REmOzrHZSiqQ_B1iheZnr',
+  anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxZWlqYmlweWpxamhleHl3eWppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3NDA4MzMsImV4cCI6MjA5NjMxNjgzM30.i8omYtSlpFQwUrMRB0HIYPIGIMiEOliTSvRXA0J-IAQ',
 
   // Storage bucket name (must exist in your project)
   storageBucket: 'chat-media',
